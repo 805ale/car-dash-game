@@ -36,7 +36,7 @@ Front view (roll) | Top view (yaw)
 Left tilt (+Z) ← 🚗 → Right tilt (−Z)
 Turn left (−Y) ← 🚗 → Turn right (+Y)
 
-##💡 Future Improvements
+## 💡 Future Improvements
 
 Add acceleration easing based on speed
 
