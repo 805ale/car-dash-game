@@ -28,21 +28,24 @@ The Path Manager creates an **infinite road** by reusing a fixed pool of prefabs
 ### 🔸 Measuring Segment Length
 ```csharp
 zPathSize = firstPath.transform.GetChild(0).GetComponent<Renderer>().bounds.size.z;
+```
 
-🔸 Repositioning Loop
+### 🔸 Repositioning Loop
+```csharp
 if (pathList[listPathIndex].transform.position.z < destroyDistance)
 {
     Vector3 nextPos = FarthestPath().transform.position + Vector3.forward * zPathSize;
     pathList[listPathIndex].transform.position = nextPos;
     listPathIndex = (listPathIndex + 1) % pathList.Count;
 }
-
+```
 
 The loop constantly reuses tiles instead of instantiating new ones.
 
-🔸 Dynamic Static-Flag Cleanup
+### 🔸 Dynamic Static-Flag Cleanup
+```csharp
 UnityEditor.GameObjectUtility.SetStaticEditorFlags(obj, UnityEditor.StaticEditorFlags.None);
-
+```
 
 Ensures that no recycled prefab keeps baked geometry or GI data that would create “ghost” visuals.
 
