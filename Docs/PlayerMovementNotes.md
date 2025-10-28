@@ -18,9 +18,10 @@ Implement smooth lane changes with subtle rotation to make dashes feel dynamic a
 ## ⚙️ Key Code Concept
 ```csharp
 Quaternion tiltTarget = neutralLocalRot * Quaternion.Euler(0f, yawTilt * dir, -rollTilt * dir);
+```
 This ensures rotation happens relative to the car’s natural orientation, not world space.
 
-🧱 DOTween Sequence
+## 🧱 DOTween Sequence
 
 Move the car sideways (DOMoveX)
 
@@ -28,14 +29,14 @@ Lean into the dash (DOLocalRotateQuaternion)
 
 Smoothly return to neutral
 
-🧭 Diagram
+## 🧭 Diagram
 
 Front view (roll) | Top view (yaw)
 
 Left tilt (+Z) ← 🚗 → Right tilt (−Z)
 Turn left (−Y) ← 🚗 → Turn right (+Y)
 
-💡 Future Improvements
+##💡 Future Improvements
 
 Add acceleration easing based on speed
 
