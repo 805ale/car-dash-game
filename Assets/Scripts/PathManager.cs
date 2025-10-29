@@ -1,63 +1,127 @@
 using UnityEngine;
+using System.Collections;              // <-- Needed for IEnumerator / Coroutine
 using System.Collections.Generic;
 
 public class PathManager : MonoBehaviour
 {
-    // Array of possible path segment prefabs to spawn randomly
-    [SerializeField] private GameObject[] pathPrefabs;
+    [Header("Prefabs & Initial Piece")]
+    [SerializeField] private GameObject[] pathPrefabs;  // pool of possible segments
+    [SerializeField] private GameObject firstPath;      // the first segment placed in scene
 
-    // The first path segment already placed in the scene
-    [SerializeField] private GameObject firstPath;
+    [Header("Generation")]
+    [SerializeField] private int pathCount = 12;        // how many more to pre-spawn after the first
 
-    // How many additional path segments to spawn after the first one
-    [SerializeField] private int pathCount;
+    private float zPathSize;                            // measured length of one segment (along Z)
+    public List<GameObject> pathList = new List<GameObject>();
+    private const float positionBias = 0f;              // tiny overlap/gap adjustment if needed
 
-    // The length of each path piece along the Z-axis
-    private float zPathSize;
+    // index to the "oldest" segment we’ll recycle next
+    public int listPathIndex = 0;                      // <-- int literal, not 0f
 
-    // Keeps track of all the spawned paths (including the first one)
-    [SerializeField] private List<GameObject> pathList = new List<GameObject>();
+    public float destroyDistance;
 
-    // Small positional offset between path pieces (useful if you need a gap or overlap)
-    private const float positionBias = 0f; 
+    // reference the other car manager
+    [SerializeField] OtherCarManager otherCarManager;
 
-    // Called once when the game starts
-    private void Start ()
+    private Camera mainCam;
+
+    private void Start()
     {
-        // Measure the Z-size of the first path piece
-        // Assumes that the visible mesh is on the first child object
+        // Cache Camera.main once (faster than calling it every frame)
+        mainCam = Camera.main;
+
+        // Measure segment length from the first path’s visible mesh (assumes child 0 has Renderer)
         zPathSize = firstPath.transform.GetChild(0).GetComponent<Renderer>().bounds.size.z;
 
-        // Add the initial path piece to the list
+        firstPath.transform.SetParent(transform, true);
+
+        // Seed the list with the first segment
         pathList.Add(firstPath);
 
-        // Spawn additional path pieces in front of the first one
+        // Spawn additional segments forward
         SpawnPath();
+
+        // Start recycling loop
+        StartCoroutine(RepositionPath());               // <-- Correct StartCoroutine syntax
     }
 
-    // Spawns a chain of path segments forward along the Z-axis
-    private void SpawnPath ()
+    /// <summary>
+    /// Pre-spawn a chain of path segments forward along +Z.
+    /// </summary>
+    private void SpawnPath()
     {
         for (int i = 0; i < pathCount; i++)
         {
-            // Determine the spawn position of the new piece:
-            // Start from the last path pieces position and move forward by zPathSize
+            // Spawn position = last segment position + one segment length forward
             Vector3 pathPosition = pathList[pathList.Count - 1].transform.position + Vector3.forward * zPathSize;
-
-            // Apply a small Z offset if needed
             pathPosition.z += positionBias;
 
-            // Pick a random path prefab from the array and instantiate it
-            GameObject path = Instantiate(
-                pathPrefabs[Random.Range(0, pathPrefabs.Length)],
-                pathPosition,
-                Quaternion.identity
-            );
+            // Pick a random prefab and spawn it
+            GameObject prefab = pathPrefabs[Random.Range(0, pathPrefabs.Length)];
+            GameObject path = Instantiate(prefab, pathPosition, Quaternion.identity);
 
-            path.transform.parent = transform;
+            // Parent to this manager (keeps Hierarchy clean)
+            path.transform.SetParent(transform, true);
 
-            // Add the new path to the list for future positioning reference
+            // Track it
             pathList.Add(path);
         }
+    }
+
+    /// <summary>
+    /// Continuously recycles the oldest segment by moving it to the front
+    /// once it’s far behind the camera/player.
+    /// </summary>
+    private IEnumerator RepositionPath()
+    {
+        while (true)
+        {
+            if (mainCam != null && pathList.Count > 0)
+            {
+                // When a segment is more than 15 units behind the camera, recycle it
+                destroyDistance = mainCam.transform.position.z - 15f;
+
+                // Check the oldest segment (at listPathIndex)
+                if (pathList[listPathIndex].transform.position.z < destroyDistance)
+                {
+                    // Find the farthest-ahead segment and position the recycled one after it
+                    Vector3 nextPathPos = FarthestPath().transform.position + Vector3.forward * zPathSize;
+                    nextPathPos.z += positionBias;
+
+                    // Move the recycled segment to the new spot (no destroy/instantiate GC)
+                    pathList[listPathIndex].transform.SetPositionAndRotation(nextPathPos, Quaternion.identity);
+
+                    otherCarManager.CheckAndDisableCarPath ();
+
+                    // Advance the ring buffer index
+                    listPathIndex++;
+                    if (listPathIndex == pathList.Count)
+                        listPathIndex = 0;
+                }
+            }
+
+            otherCarManager.FindCarAndReset ();
+            yield return null; // wait a frame
+        }
+    }
+
+    /// <summary>
+    /// Returns the segment with the greatest Z (the one farthest ahead).
+    /// </summary>
+    private GameObject FarthestPath()
+    {
+        GameObject farthest = pathList[0];
+        float bestZ = farthest.transform.position.z;
+
+        for (int i = 1; i < pathList.Count; i++)
+        {
+            float z = pathList[i].transform.position.z;
+            if (z > bestZ)
+            {
+                bestZ = z;
+                farthest = pathList[i];
+            }
+        }
+        return farthest;
     }
 }

@@ -26,7 +26,7 @@ public class Player : MonoBehaviour
     [SerializeField] private float swipeThresholdPixels = 30f;
 
     // --- Optional physics tweak (kept from your version) ---
-    private Rigidbody rb;
+    Rigidbody rb;
 
     // --- Movement/Tilt tuning ---
     [Header("Dash Movement")]
@@ -40,6 +40,8 @@ public class Player : MonoBehaviour
     [SerializeField] private float tiltBackTime = 0.14f;
     [SerializeField] private Ease tiltBackEase = Ease.InOutSine;
 
+    [SerializeField] private float moveSpeed = 20f;
+
     [Header("Rotate Only Visual (Optional)")]
     [Tooltip("If set, only this transform will rotate for the lean (recommended: the car mesh). If null, the root rotates.")]
     [SerializeField] private Transform visualToRotate;
@@ -52,6 +54,8 @@ public class Player : MonoBehaviour
     private void Awake()
     {
         rb = GetComponent<Rigidbody>();
+        rb.interpolation = RigidbodyInterpolation.Interpolate;   // smooth between physics ticks
+        rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
         if (rb) rb.centerOfMass = Vector3.zero;
 
         lanePositions = new float[] { LeftLane2, LeftLane1, CenterLane, RightLane1, RightLane2 };
@@ -75,6 +79,12 @@ public class Player : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.LeftArrow))  TryDash(-1);
         if (Input.GetKeyDown(KeyCode.RightArrow)) TryDash(+1);
 #endif
+    }
+
+    private void FixedUpdate()
+    {
+        // Move forward at a constant speed in physics space
+        rb.linearVelocity = Vector3.forward * moveSpeed;
     }
 
     /// <summary>
