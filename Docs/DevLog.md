@@ -18,3 +18,9 @@
 - Added physics-based forward motion with interpolation.
 - Implemented LateUpdate camera follow with smoothing.
 - Tuned FOV and anti-aliasing to reduce road shimmer.
+
+## [2025-10-29] Traffic System Integration
+- Added `OtherCarManager` for traffic car spawning and pooling.
+- Implemented object pooling to avoid runtime allocation.
+- Integrated with `PathManager` recycling logic.
+- Documented behavior and usage in `OtherCarManagerNotes.md`.
